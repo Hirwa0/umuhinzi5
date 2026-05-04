@@ -1,0 +1,9 @@
+{
+  "name": "UMUHINZI AI",
+  "description": "Inclusive agricultural AI assistant for farmers, featuring chatbot, weather alerts, crop diagnosis, market prices, and community interaction.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

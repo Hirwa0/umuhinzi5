@@ -1,0 +1,170 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "language": { "type": "string" },
+        "theme": { "type": "string" },
+        "notificationsEnabled": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ChatSession": {
+      "title": "Chat Session",
+      "description": "A conversation session between user and AI",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "An individual message in a chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "integer" }
+      }
+    },
+    "Post": {
+      "title": "Social Post",
+      "description": "Community news or question post",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "likes": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorName", "authorPhoto", "content", "likes", "createdAt"]
+    },
+    "Like": {
+      "title": "Post Like",
+      "description": "A user's signal of appreciation for a post",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a post",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Room": {
+      "title": "Private Room",
+      "description": "A private discussion room for farmers",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "creator": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" } },
+        "admins": { "type": "array", "items": { "type": "string" } },
+        "joinCode": { "type": "string" },
+        "isPrivate": { "type": "boolean" },
+        "pendingApprovals": { "type": "integer" },
+        "pendingUids": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "RoomMessage": {
+      "title": "Room Message",
+      "description": "A message sent within a private room",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification",
+      "type": "object",
+      "properties": {
+        "recipientUid": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "groupName": { "type": "string" }
+      }
+    },
+    "AppSetting": {
+      "title": "App Setting",
+      "description": "Global application configuration",
+      "type": "object",
+      "properties": {
+        "logoUrl": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "settings/{settingId}": {
+      "schema": "AppSetting",
+      "description": "Global app settings"
+    },
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "users/{userId}/sessions/{sessionId}": {
+      "schema": "ChatSession",
+      "description": "Chat sessions for each user"
+    },
+    "users/{userId}/sessions/{sessionId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Messages within a session"
+    },
+    "posts/{postId}": {
+      "schema": "Post",
+      "description": "Community posts"
+    },
+    "posts/{postId}/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Comments on community posts"
+    },
+    "posts/{postId}/likes/{userId}": {
+      "schema": "Like",
+      "description": "Likes on community posts"
+    },
+    "rooms/{roomId}": {
+      "schema": "Room",
+      "description": "Private farmer rooms"
+    },
+    "rooms/{roomId}/messages/{messageId}": {
+      "schema": "RoomMessage",
+      "description": "Messages in private rooms"
+    },
+    "notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Global notifications"
+    }
+  }
+}

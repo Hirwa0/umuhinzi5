@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UMUHINZI AI</title>
+    <script>
+      (function() {
+        const targetTitle = "UMUHINZI AI";
+        
+        // Use defineProperty to make the title read-only and unchangeable
+        try {
+          Object.defineProperty(document, 'title', {
+            get: function() { return targetTitle; },
+            set: function() { /* Ignore attempts to set */ },
+            configurable: false
+          });
+        } catch (e) {
+          // Fallback if defineProperty fails
+          document.title = targetTitle;
+          setInterval(() => {
+            if (document.title !== targetTitle) document.title = targetTitle;
+          }, 50);
+        }
+
+        // Also update the actual DOM element just in case
+        const titleEl = document.querySelector('title');
+        if (titleEl) titleEl.innerText = targetTitle;
+      })();
+    </script>
+    <meta property="og:title" content="UMUHINZI AI" />
+    <meta name="twitter:title" content="UMUHINZI AI" />
+    <meta name="apple-mobile-web-app-title" content="UMUHINZI AI" />
+    <meta name="application-name" content="UMUHINZI AI" />
+    <meta name="theme-color" content="#15803d" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="https://picsum.photos/seed/agriculture/192/192" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

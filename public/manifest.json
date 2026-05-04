@@ -1,0 +1,20 @@
+{
+  "short_name": "Umuhinzi AI",
+  "name": "UMUHINZI AI — Your Agricultural Expert",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/agriculture/192/192",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://picsum.photos/seed/agriculture/512/512",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#15803d",
+  "background_color": "#ffffff"
+}

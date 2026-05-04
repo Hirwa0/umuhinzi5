@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isVerifiedUser() { return isSignedIn() && (request.auth.token.email_verified == true); }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isGlobalAdmin() { return isSignedIn() && request.auth.token.email == "mr7035152@gmail.com"; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // ROOMS Helpers (Master Gate Pattern)
+    function getRoom(rId) {
+      return get(/databases/$(database)/documents/rooms/$(rId)).data;
+    }
+    function isRoomMember(rId) {
+      return isVerifiedUser() && (request.auth.uid in getRoom(rId).members);
+    }
+    function isRoomAdmin(rId) {
+      return isVerifiedUser() && (request.auth.uid in getRoom(rId).admins);
+    }
+    function isRoomPublic(rId) {
+      return getRoom(rId).get('isPublic', false) == true || getRoom(rId).get('isPrivate', true) == false;
+    }
+
+    // --- Validation Blueprints ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'createdAt'])
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() <= 100
+        && (data.get('email', '') == '' || (data.email is string && data.email.size() <= 100))
+        && data.createdAt is string
+        && (data.get('language', '') == '' || data.language is string)
+        && (data.get('theme', '') == '' || data.theme is string)
+        && (data.get('notificationsEnabled', true) is bool);
+    }
+
+    function isValidChatSession(data) {
+      return data.keys().hasAll(['userId', 'title', 'lastMessage', 'createdAt', 'updatedAt'])
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() <= 200;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['authorUid', 'authorName', 'authorPhoto', 'content', 'likes', 'createdAt'])
+        && data.authorUid == request.auth.uid
+        && data.content is string && data.content.size() <= 2000
+        && data.likes is number;
+    }
+
+    function isValidLike(data) {
+      return data.keys().hasAll(['uid', 'createdAt'])
+        && data.uid == request.auth.uid
+        && data.createdAt is string;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['authorUid', 'authorName', 'authorPhoto', 'content', 'createdAt'])
+        && data.authorUid == request.auth.uid
+        && data.content is string && data.content.size() <= 1000;
+    }
+
+    function isValidRoomMessage(data) {
+      return data.keys().hasAll(['authorUid', 'authorName', 'authorPhoto', 'content', 'createdAt'])
+        && data.authorUid == request.auth.uid
+        && (data.authorName == null || (data.authorName is string && data.authorName.size() <= 100))
+        && (data.authorPhoto == null || (data.authorPhoto is string && data.authorPhoto.size() <= 500))
+        && data.content is string && data.content.size() <= 1000
+        && data.createdAt is string;
+    }
+
+    // --- Collection Routes ---
+
+    // Connection check
+    match /_system_/{docId} {
+      allow get: if true;
+    }
+
+    // SETTINGS (Global App Config - Read Only for Users)
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if false; // System only
+    }
+
+    // USERS
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow create, update: if isVerifiedUser() && isOwner(userId) && isValidUser(incoming());
+      
+      match /sessions/{sessionId} {
+        allow read, write: if isOwner(userId);
+        match /messages/{messageId} {
+          allow read, write: if isOwner(userId);
+        }
+      }
+    }
+
+    // NOTIFICATIONS
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.recipientUid) || isGlobalAdmin();
+      allow create: if isVerifiedUser(); // Can trigger notifications
+      allow update: if isOwner(resource.data.recipientUid) || isGlobalAdmin();
+      allow delete: if isOwner(resource.data.recipientUid) || isGlobalAdmin();
+    }
+
+    // POSTS (Community Feed)
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isVerifiedUser() && isValidPost(incoming());
+      allow update: if (isVerifiedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
+                    (isVerifiedUser() && isOwner(existing().authorUid) && isValidPost(incoming())) ||
+                    isGlobalAdmin();
+      allow delete: if isOwner(existing().authorUid) || isGlobalAdmin();
+
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isVerifiedUser() && isValidComment(incoming());
+        allow delete: if isOwner(existing().authorUid) || isOwner(get(/databases/$(database)/documents/posts/$(postId)).data.authorUid) || isGlobalAdmin();
+      }
+
+      match /likes/{likedUserId} {
+        allow read: if isSignedIn();
+        allow create, update: if isVerifiedUser() && isOwner(likedUserId) && isValidLike(incoming());
+        allow delete: if isOwner(likedUserId) || isGlobalAdmin();
+      }
+    }
+
+    // ROOMS (Private Discussion Groups)
+    match /rooms/{roomId} {
+      allow read: if isRoomMember(roomId) || isRoomPublic(roomId) || isGlobalAdmin();
+      allow create: if isVerifiedUser();
+      allow update: if isRoomMember(roomId) || isRoomAdmin(roomId) || isGlobalAdmin() || (isVerifiedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['members', 'pendingUids', 'pendingApprovals']));
+      allow delete: if isRoomAdmin(roomId) || isOwner(existing().creator) || isGlobalAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isRoomMember(roomId) || isRoomPublic(roomId) || isGlobalAdmin();
+        allow create: if (isRoomMember(roomId) || isRoomPublic(roomId) || isGlobalAdmin()) && isValidRoomMessage(incoming());
+        allow update, delete: if isOwner(existing().authorUid) || isRoomAdmin(roomId) || isGlobalAdmin();
+      }
+    }
+  }
+}
